@@ -1,7 +1,7 @@
 Source: haskell-agi
 Priority: optional
 Section: devel
-Maintainer: Jack Donaldson <jack.donaldson@freespire.org>
+Maintainer: Jeremy Shaw <jeremy@n-heptane.com>
 Build-Depends: debhelper (>= 4.0.0), haskell-devscripts (>=0.5.12), ghc6 (>=6.4), ghc6-prof
 Build-Depends-Indep: haddock, hugs (>= 98.200503.08)
 Standards-Version: 3.7.2.0
@@ -10,8 +10,9 @@ Package: libghc6-agi-dev
 Section: libdevel
 Architecture: any
 Depends: ${haskell:Depends}
-Description: A Haskell library that does something neat
- The library does something really cool you can not live without.
+Description: A Haskell AGI library
+ A library for creating applications that can be called from Asterisk
+ using the Asterisk Gateway Interface (AGI).
  .
  This package contains the libraries compiled for GHC 6.
 
@@ -19,8 +20,9 @@ Package: libghc6-agi-prof
 Section: libdevel
 Architecture: any
 Depends: ${haskell:Depends}
-Description: A Haskell library that does something neat
- The library does something really cool you can not live without.
+Description: A Haskell AGI library
+ A library for creating applications that can be called from Asterisk
+ using the Asterisk Gateway Interface (AGI).
  .
  This package contains the libraries compiled for GHC 6 with profiling
  enabled.
@@ -29,13 +31,15 @@ Package: libhugs-agi
 Section: libdevel
 Architecture: all
 Depends: ${haskell:Depends}
-Description: A Haskell library that does something neat
- The library does something really cool you can not live without.
+Description: A Haskell AGI library
+ A library for creating applications that can be called from Asterisk
+ using the Asterisk Gateway Interface (AGI).
  .
  This package contains the libraries compiled for Hugs.
 
 Package: haskell-agi-doc
 Section: doc
 Architecture: all
-Description: Documentation for a Haskell library
- A haskell library that totally rules.
+Description: Documentation for a Haskell AGI library
+ A library for creating applications that can be called from Asterisk
+ using the Asterisk Gateway Interface (AGI).
