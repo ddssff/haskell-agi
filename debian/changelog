@@ -1,0 +1,6 @@
+haskell-agi (1.0) unstable; urgency=low
+
+  * Initial Debian package.
+
+ -- Jeremy Shaw <jeremy@n-heptane.com>  Sat, 12 May 2007 19:54:42 -0700
+
