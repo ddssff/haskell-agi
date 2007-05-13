@@ -1,3 +1,9 @@
+haskell-agi (1.1) unstable; urgency=low
+
+  * Major rewrite of internals, some API breakage
+
+ -- Jeremy Shaw <jeremy@n-heptane.com>  Sun, 13 May 2007 14:18:46 -0700
+
 haskell-agi (1.0) unstable; urgency=low
 
   * Initial Debian package.
