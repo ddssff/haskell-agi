@@ -14,9 +14,10 @@ Maintainer:	Jeremy Shaw <jeremy@n-heptane.com>
 Homepage:       http://www.n-heptane.com/nhlab/repos/haskell-agi
 Build-Depends:  base, parsec, mtl
 Exposed-modules:
-        debian/changelog  debian/compat  debian/control  debian/copyright  
-	debian/haskell-agi-doc.docs  debian/rules
 	Network.AGI 
+Extra-Source-Files:
+	debian/changelog  debian/compat  debian/control  debian/copyright  
+ 	debian/haskell-agi-doc.docs  debian/rules
 	examples/guessinggame/GuessingGame.hs
 	examples/guessinggame/sounds/guessing-game-correct.gsm
 	examples/guessinggame/sounds/guessing-game-intro.gsm
