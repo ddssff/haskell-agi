@@ -2,7 +2,7 @@ Name:           AGI
 Category:	Network
 Synopsis:       A library for writing AGI scripts for Asterisk
 Description: Asterisk is an open-source Voice over IP server
- (VoIP). Asterisk provides a Asterisk Gateway Interface (AGI), which
+ (VoIP). Asterisk provides an Asterisk Gateway Interface (AGI), which
  can be used to write external programs that interact with
  Asterisk. It is typically used for creating Interactive Voice
  Response (IVR) systems. 

@@ -27,31 +27,42 @@ mainAGI =
 
 playGame :: AGI ()
 playGame =
-    do secretDigit <- liftIO $ randomRIO (0, 9)
-       stream "guessing-game-intro" []
-       guess <- waitForDigit (-1)
-       play (compare secretDigit) (fromMaybe 0 guess)
+    do secretIndex <- liftIO $ randomRIO (0, 9)
+       let secretDigit = [Zero .. Nine] !! secretIndex
+       streamFile "guessing-game-intro" [] Nothing
+       mGuess <- waitForDigit (-1)
+       let firstGuess =
+               case mGuess of
+                 (Just (Just digit)) -> digit
+                 _ -> Zero
+       play (compare secretDigit) firstGuess
        return ()
 
+play :: (Digit -> Ordering) -> Digit -> AGI ()
 play oracle guess =
     loop guess
     where
       loop guess =
           case oracle guess of
             LT -> 
-                do stream "guessing-game-lower" []
-                   sayNumber guess []
-                   nextGuess <- waitForDigit (-1)
-                   loop (fromMaybe guess nextGuess)
+                do streamFile "guessing-game-lower" [] Nothing
+                   sayDigits [guess] []
+                   mNextGuess <- waitForDigit (-1)
+                   case mNextGuess of
+                     (Just (Just nextGuess)) -> loop nextGuess
+                     _ -> loop guess
             GT ->
-                do stream "guessing-game-higher" []
-                   sayNumber guess []
-                   nextGuess <- waitForDigit (-1)
-                   loop (fromMaybe guess nextGuess)
+                do streamFile "guessing-game-higher" [] Nothing
+                   sayDigits [guess] []
+                   mNextGuess <- waitForDigit (-1)
+                   case mNextGuess of
+                     (Just (Just nextGuess)) -> loop nextGuess
+                     _ -> loop guess
             EQ ->
-                do stream "guessing-game-yay" []
-                   sayNumber guess []
-                   stream "guessing-game-correct" []
+                do streamFile "guessing-game-yay" [] Nothing
+                   sayDigits [guess] []
+                   streamFile "guessing-game-correct" [] Nothing
+                   return ()
 
 {-
 
