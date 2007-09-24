@@ -15,7 +15,7 @@ import Network.AGI
 
 main :: IO ()
 main =
-       run mainAGI
+       run mainAGI Ignore
 
 mainAGI :: AGI ()
 mainAGI =

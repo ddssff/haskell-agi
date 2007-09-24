@@ -76,9 +76,9 @@ instance Show SoundType where
     show GSM  = "gsm"
 
 -- TODO: let user install a custom sipHUP handler (sigHUP is sent when the caller hangs ups)
-run :: AGI a -> IO a
-run agi =
-    do installHandler sigHUP Ignore Nothing
+run :: AGI a -> Handler -> IO a
+run agi hupHandler =
+    do installHandler sigHUP hupHandler Nothing
        hSetBuffering stdin LineBuffering
        hSetBuffering stdout LineBuffering
        agiVars <- readAgiVars
@@ -199,20 +199,21 @@ data RecordResult
 record :: FilePath -- ^ record to this file
        -> SoundType -- ^ |GSM \| WAV|
        -> [Digit] -- ^ stop recording if one of these digits is entered
-       -> Integer -- ^ maximum record time in milliseconds, -1 for no timeout
+       -> Maybe Integer -- ^ maximum record time in milliseconds, -1 for no timeout
        -> Maybe Integer -- ^ offset samples
        -> Bool -- ^ beep to indicate recording has begun
        -> Maybe Integer -- ^ stop recording if this many seconds of silence passes
        -> AGI (RecordResult, Integer) -- ^ exit condition, endpos=offset
 record fp soundType escapeDigits length offset beep silence =
     do res <- sendRecv $ ("RECORD FILE " ++ fp ++ " " ++ show soundType ++ " " ++ 
-                          ppEscapeDigits escapeDigits ++ " " ++  show length ++  
+                          ppEscapeDigits escapeDigits ++ " " ++  (maybe "-1" show length) ++  
                           (maybe "" (\o -> ' ': show o) offset) ++ 
                           (if beep then " beep" else "") ++
                           (maybe "" (\s -> " s=" ++ show s) silence))
        parseResult p res
+
+p = pResult >> (pFailureToWrite <|> pFailureOnWaitFor <|> pHangUp <|> pInterrupted <|> pTimeout <|> pRandomError)
     where
-      p = pResult >> (pFailureToWrite <|> pFailureOnWaitFor <|> pHangUp <|> pInterrupted <|> pTimeout <|> pRandomError)
       pFailureToWrite = 
           do try (string "-1 (writefile)") >> return (FailureToWrite, 0)
       pFailureOnWaitFor = 
@@ -226,7 +227,7 @@ record fp soundType escapeDigits length offset beep silence =
              ep <- pEndPos
              return (HangUp, ep)
       pInterrupted = try $
-          do digit <- pDigit
+          do digit <- pAsciiDigit
              pSpace
              string "(dtmf)"
              pSpace
