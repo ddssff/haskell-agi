@@ -6,7 +6,7 @@ Description: Asterisk is an open-source Voice over IP server
  can be used to write external programs that interact with
  Asterisk. It is typically used for creating Interactive Voice
  Response (IVR) systems. 
-Version:        1.1
+Version:        1.1.1
 License:        BSD3
 License-File:	debian/copyright
 Author:         Jeremy Shaw

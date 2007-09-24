@@ -15,6 +15,7 @@ module Network.AGI
     , sayNumber
     , streamFile
     , waitForDigit
+    , record
     ) where
 
 import Control.Monad
