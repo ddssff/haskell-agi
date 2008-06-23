@@ -9,13 +9,13 @@ Description:
      Response (IVR) systems. 
 Version:        1.1.1
 License:        BSD3
-License-File:   debian/copyright
+License-File:   LICENSE
 Author:         Jeremy Shaw
 Maintainer:     Jeremy Shaw <jeremy@n-heptane.com>
 Homepage:       http://www.n-heptane.com/nhlab/repos/haskell-agi
 Extra-Source-Files:
         debian/changelog  debian/compat  debian/control  debian/copyright  
-        debian/haskell-agi-doc.docs  debian/rules
+        debian/haskell-agi-doc.postinst debian/haskell-agi-doc.postrm debian/rules
         examples/guessinggame/GuessingGame.hs
         examples/guessinggame/sounds/guessing-game-correct.gsm
         examples/guessinggame/sounds/guessing-game-intro.gsm
