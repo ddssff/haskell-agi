@@ -3,6 +3,8 @@ module Network.AGI
     ( Digit(..)
     , AGI
     , run
+    , fastAGI
+    , runInternal
     , ppDigit
     , ppEscapeDigits
     , SoundType(..)
@@ -18,6 +20,8 @@ module Network.AGI
     , record
     ) where
 
+import Control.Concurrent
+import Control.Exception (finally)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader
@@ -25,13 +29,19 @@ import Control.Monad.Error
 import Data.Char
 import Data.Maybe
 import Data.Word
+import Network
 import Text.ParserCombinators.Parsec
 import System.IO
 import System.Posix.Signals
 import System.Random
 
-newtype AGI a = AGI { runAGI :: ReaderT [(String, String)] IO a }
-    deriving (Monad, MonadIO, Functor, MonadError IOError, MonadReader [(String, String)])
+data AGIEnv = AGIEnv { agiVars :: [(String, String)]
+                     , agiInH :: Handle
+                     , agiOutH :: Handle
+                     }
+
+newtype AGI a = AGI { runAGI :: ReaderT AGIEnv IO a }
+    deriving (Monad, MonadIO, Functor, MonadError IOError, MonadReader AGIEnv)
 
 data Digit
     = Pound
@@ -76,26 +86,54 @@ instance Show SoundType where
     show GSM  = "gsm"
 
 -- TODO: let user install a custom sipHUP handler (sigHUP is sent when the caller hangs ups)
+-- |Top-level wrapper for single-shot AGI scripts.
+-- Example:
+-- @ main = run yourAGI Ignore @
 run :: AGI a -> Handler -> IO a
 run agi hupHandler =
     do installHandler sigHUP hupHandler Nothing
-       hSetBuffering stdin LineBuffering
-       hSetBuffering stdout LineBuffering
-       agiVars <- readAgiVars
-       runReaderT (runAGI agi) agiVars
+       runInternal agi stdin stdout
 
-readAgiVars :: IO [(String, String)]
-readAgiVars = 
+-- |Top-level for long running AGI scripts.
+-- Example:
+-- @ main = fastAGI Nothing yourAGI @
+-- You should be sure to compile with -threaded. Note that 'yourAGI'
+-- may be running simultaneously in multiple threads, so you will need
+-- some concurrency control for shared data.
+-- TODO: support a hang-up handler
+fastAGI :: Maybe PortID -> (HostName -> PortNumber -> AGI a) -> IO ()
+fastAGI portId agi =
+    do installHandler sigPIPE Ignore Nothing 
+       s <- listenOn $ fromMaybe (PortNumber 4573) portId
+       (forever $ (do (h, hostname, portNum) <- accept s
+                      forkIO $ runInternal (agi hostname portNum) h h >> hClose h
+                  )) `finally` (sClose s)
+
+
+-- |runInternal - run an AGI script using the supplied Handles for input and output
+-- You probably want 'run' or 'fastAGI'. This function is exposed so
+-- that 3rd party libraries such as HAppS can easily add support for
+-- FastAGI support.
+-- TODO: support general method of handling extra arguments (query_string vs command-line arguments)
+runInternal :: AGI a -> Handle -> Handle -> IO a
+runInternal agi inh outh =
+    do vars <- readAgiVars inh
+       hSetBuffering inh  LineBuffering
+       hSetBuffering outh LineBuffering
+       runReaderT (runAGI agi) (AGIEnv vars inh outh)
+
+readAgiVars :: Handle -> IO [(String, String)]
+readAgiVars inh = 
     do mAgiVar <- readAgiVar 
        case mAgiVar of
 	    Nothing -> 
 		return []
 	    Just agiVar ->
-		do rest <- readAgiVars
+		do rest <- readAgiVars inh
 		   return (agiVar:rest)
     where readAgiVar :: IO (Maybe (String, String))
 	  readAgiVar =
-	      do l <- getLine
+	      do l <- hGetLine inh
 		 case l of
 		      "" -> return Nothing
 		      _ -> let (a,v) = break ((==) ':') l in
@@ -103,8 +141,10 @@ readAgiVars =
 
 sendRecv :: Command -> AGI String
 sendRecv cmd =
-    liftIO $ do putStrLn cmd
-                getLine
+    do inh  <- liftM agiInH  $ ask
+       outh <- liftM agiOutH $ ask
+       liftIO $ do hPutStrLn inh cmd
+                   hGetLine outh
 
 {-
 Usage: ANSWER

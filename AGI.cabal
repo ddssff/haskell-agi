@@ -7,7 +7,7 @@ Description:
      can be used to write external programs that interact with
      Asterisk. It is typically used for creating Interactive Voice
      Response (IVR) systems. 
-Version:        1.1.1
+Version:        1.2
 License:        BSD3
 License-File:   LICENSE
 Author:         Jeremy Shaw
@@ -33,9 +33,9 @@ library
     build-depends:  parsec, mtl
 
     if flag(small_base)
-        build-depends:  base >= 3, random, unix
+        build-depends:  base >= 3, random, unix, network
     else
-        build-depends:  base <  3
+        build-depends:  base <  3, network
 
     Exposed-modules:
             Network.AGI 
