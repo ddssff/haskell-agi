@@ -1,12 +1,13 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Network.AGI 
     ( Digit(..)
+    , ppDigit
+    , ppEscapeDigits
+    , digitsToInteger
     , AGI
     , run
     , fastAGI
     , runInternal
-    , ppDigit
-    , ppEscapeDigits
     , SoundType(..)
     , sendRecv
     , answer
@@ -27,6 +28,7 @@ import Control.Monad.Trans
 import Control.Monad.Reader
 import Control.Monad.Error
 import Data.Char
+import Data.Generics
 import Data.Maybe
 import Data.Word
 import Network
@@ -43,6 +45,7 @@ data AGIEnv = AGIEnv { agiVars :: [(String, String)]
 newtype AGI a = AGI { runAGI :: ReaderT AGIEnv IO a }
     deriving (Monad, MonadIO, Functor, MonadError IOError, MonadReader AGIEnv)
 
+-- |DTMF digits
 data Digit
     = Pound
     | Star
@@ -56,8 +59,9 @@ data Digit
     | Seven
     | Eight
     | Nine
-      deriving (Eq, Ord, Read, Show, Enum)
+      deriving (Eq, Ord, Read, Show, Enum, Data, Typeable)
 
+-- |convert a 'Digit' to its ASCII representation
 ppDigit :: Digit -> Char
 ppDigit Pound = '#'
 ppDigit Star = '*'
@@ -72,14 +76,24 @@ ppDigit Seven = '7'
 ppDigit Eight = '8'
 ppDigit Nine = '9'
 
+-- |convert a list of 'Digit's into a quoted string.
+-- The quoted string format is used by many AGI commands
 ppEscapeDigits :: [Digit] -> String
 ppEscapeDigits digits = '"' : (map ppDigit digits  ++ "\"")
+
+-- |convert a list of 'Digit's to an 'Integer'.
+-- Will fail if the list is empty or contains * or #
+digitsToInteger :: [Digit] -> Maybe Integer
+digitsToInteger digits =
+    case reads (map ppDigit digits) of
+      [(i, [])] -> (Just i)
+      _ -> Nothing
 
 type Command = String
 -- data Timeout =  Timeout Word (Maybe Word) -- ^ timeout, max digits
 
 data SoundType = WAV | GSM
-               deriving Eq
+               deriving (Eq, Enum, Data, Typeable)
 
 instance Show SoundType where
     show WAV = "wav"
@@ -87,7 +101,9 @@ instance Show SoundType where
 
 -- TODO: let user install a custom sipHUP handler (sigHUP is sent when the caller hangs ups)
 -- |Top-level wrapper for single-shot AGI scripts.
+--
 -- Example:
+--
 -- @ main = run yourAGI Ignore @
 run :: AGI a -> Handler -> IO a
 run agi hupHandler =
@@ -95,11 +111,15 @@ run agi hupHandler =
        runInternal agi stdin stdout
 
 -- |Top-level for long running AGI scripts.
+--
 -- Example:
+--
 -- @ main = fastAGI Nothing yourAGI @
+--
 -- You should be sure to compile with -threaded. Note that 'yourAGI'
 -- may be running simultaneously in multiple threads, so you will need
 -- some concurrency control for shared data.
+--
 -- TODO: support a hang-up handler
 fastAGI :: Maybe PortID -> (HostName -> PortNumber -> AGI a) -> IO ()
 fastAGI portId agi =
@@ -111,9 +131,11 @@ fastAGI portId agi =
 
 
 -- |runInternal - run an AGI script using the supplied Handles for input and output
+--
 -- You probably want 'run' or 'fastAGI'. This function is exposed so
 -- that 3rd party libraries such as HAppS can easily add support for
 -- FastAGI support.
+--
 -- TODO: support general method of handling extra arguments (query_string vs command-line arguments)
 runInternal :: AGI a -> Handle -> Handle -> IO a
 runInternal agi inh outh =
@@ -139,6 +161,9 @@ readAgiVars inh =
 		      _ -> let (a,v) = break ((==) ':') l in
 				       return (Just (a, dropWhile ((==) ' ') (tail v)))
 
+-- |send an AGI Command, and return the Response
+--
+-- this function provides the low-level send/receive functionality.
 sendRecv :: Command -> AGI String
 sendRecv cmd =
     do inh  <- liftM agiInH  $ ask
@@ -172,7 +197,9 @@ Returns:
 failure: 200 result=-1 
 success: 200 result=1 
 -}
-hangUp :: Maybe String -> AGI Bool
+-- |hangUp the specified channel
+hangUp :: Maybe String -- ^ channel to hangup, or current channel if not specified
+       -> AGI Bool
 hangUp mChannel =
     do res <- sendRecv ("HANGUP" ++ (maybe "" (' ' :) mChannel))
        parseResult (pResult >> ((char '1' >> return True) <|> (string "-1" >> return False))) res
@@ -190,7 +217,9 @@ success: 200 result=<digits>
 -}
 
 -- TODO: does digit include # and * ?
--- default timeout is 2000 ms
+-- |play a file and return and digits pressed
+--
+-- See also: 'streamFile'
 getData :: FilePath -- ^ file to stream
         -> Maybe Integer -- ^ timout in ms after keypress (default: 2000 ms)
         -> Maybe Integer -- ^ max
@@ -234,8 +263,9 @@ data RecordResult
     | Interrupted Digit
     | Timeout
     | RandomError String
-      deriving (Eq, Show)
+      deriving (Eq, Show, Data, Typeable)
 
+-- |record channel to a file
 record :: FilePath -- ^ record to this file
        -> SoundType -- ^ |GSM \| WAV|
        -> [Digit] -- ^ stop recording if one of these digits is entered
@@ -304,7 +334,10 @@ digit pressed: 200 result=<digit>
 <digit> is the ascii code for the digit pressed. 
 -}
 
-sayDigits :: [Digit] -> [Digit] -> AGI (Maybe (Maybe Digit))
+-- |say the given digit string
+sayDigits :: [Digit] -- ^ digits to say
+          -> [Digit] -- ^ digits which can stop playback
+          -> AGI (Maybe (Maybe Digit)) -- ^ Nothing on error, Just Nothing on success. Just (Just <digit>) if interrupted.
 sayDigits digits escapeDigits =
     do res <- sendRecv $ "SAY DIGITS " ++ map ppDigit digits ++ " " ++ ppEscapeDigits escapeDigits
        parseResult p res
@@ -366,6 +399,9 @@ STREAM FILE is known to behave inconsistently, especially when used in conjuctio
 Workaround: Use EXEC PLAYBACK instead. 
 -}
 
+-- |playback the specified file, can be interupted by the given digits.
+--
+-- See also: 'getData'
 streamFile :: FilePath -- ^ file to stream
            -> [Digit] -- ^ escape digits
            -> Maybe Integer -- ^ sample offset
@@ -412,6 +448,8 @@ success: 200 result=<digit>
 -}
 
 -- |wait for channel to receive a DTMF digit. 
+--
+-- See also: 'getData' for multiple digits
 waitForDigit :: Integer -- ^ timeout in milliseconds, -1 to block indefinitely
              -> AGI (Maybe (Maybe Digit)) -- ^ |Nothing| on error, |Just Nothing| on timeout, |Just (Just <digit>)| on success
 waitForDigit timeout =
