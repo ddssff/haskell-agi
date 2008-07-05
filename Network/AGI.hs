@@ -230,8 +230,8 @@ getData fp mTimeout mMaxDigits =
                         case (mTimeout, mMaxDigits) of
                           (Nothing, Nothing) -> ""
                           (Just timeout, Nothing) ->  show timeout
-                          (Nothing, Just maxDigits) -> "2000 " ++ show maxDigits
-                          (Just timeout, Just maxDigits) -> show timeout ++" "++ show maxDigits
+                          (Nothing, Just maxDigits) -> " 2000 " ++ show maxDigits
+                          (Just timeout, Just maxDigits) -> " " ++ show timeout ++" "++ show maxDigits
 
     in
       do res <- sendRecv cmd

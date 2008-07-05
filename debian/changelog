@@ -1,3 +1,9 @@
+haskell-agi (1.2.2) unstable; urgency=low
+
+  * Fix bug in getData when specifying maxDigits or timeout
+
+ -- Jeremy Shaw <jeremy@n-heptane.com>  Fri, 04 Jul 2008 18:02:34 -0700
+
 haskell-agi (1.2.1) unstable; urgency=low
 
   * Added digitsToInteger
