@@ -50,9 +50,11 @@ Description: A library for writing AGI scripts for Asterisk
   .
   This package contains the libraries compiled with profiling enabled.
 
-Package: haskell-agi-doc
-Architecture: all
+Package: libghc6-agi-doc
+Architecture: any
 Section: libdevel
+Conflicts: haskell-agi-doc
+Replaces: haskell-agi-doc
 Depends: ${haskell:Depends}
 Description: A library for writing AGI scripts for Asterisk
   Asterisk is an open-source Voice over IP server (VoIP).

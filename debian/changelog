@@ -1,3 +1,9 @@
+haskell-agi (1.2.2.1) unstable; urgency=low
+
+  * haskell-agi-doc -> libghc6-agi-doc due to haddock 2.x
+
+ -- Jeremy Shaw <jeremy@n-heptane.com>  Sun, 21 Sep 2008 17:10:26 -0700
+
 haskell-agi (1.2.2) unstable; urgency=low
 
   * Fix bug in getData when specifying maxDigits or timeout
