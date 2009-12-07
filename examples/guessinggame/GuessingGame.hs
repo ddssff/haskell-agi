@@ -2,6 +2,7 @@ module Main where
 
 -- Standard Haskell Modules
 
+import Control.Concurrent
 import Control.Monad.Trans
 import Data.Maybe
 import Data.Word
@@ -15,12 +16,12 @@ import Network.AGI
 
 main :: IO ()
 main =
-       run mainAGI Ignore
+       run mainAGI (undefined) -- Ignore
 
 mainAGI :: AGI ()
 mainAGI =
     do answer
-       liftIO $ sleep 1
+       liftIO $ (threadDelay (1 * 10^6))
        playGame
        hangUp Nothing
        return ()

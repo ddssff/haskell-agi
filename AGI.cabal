@@ -11,8 +11,8 @@ Version:        1.3
 License:        BSD3
 License-File:   LICENSE
 Author:         Jeremy Shaw
-Maintainer:     Jeremy Shaw <jeremy@n-heptane.com>
-Homepage:       http://www.n-heptane.com/nhlab/repos/haskell-agi
+Maintainer:     SeeReason Partners <partners@seereason.com>
+Homepage:       http://src.seereason.com/haskell-agi
 Extra-Source-Files:
         debian/changelog  debian/compat  debian/control  debian/copyright  
         debian/haskell-agi-doc.postinst debian/haskell-agi-doc.postrm debian/rules
@@ -42,3 +42,7 @@ library
 
     -- For more complex build options see:
     -- http://www.haskell.org/ghc/docs/latest/html/Cabal/
+
+source-repository head
+    type:     darcs
+    location: http://src.seereason.com/haskell-agi
