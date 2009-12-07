@@ -15,7 +15,7 @@ Maintainer:     SeeReason Partners <partners@seereason.com>
 Homepage:       http://src.seereason.com/haskell-agi
 Extra-Source-Files:
         debian/changelog  debian/compat  debian/control  debian/copyright  
-        debian/haskell-agi-doc.postinst debian/haskell-agi-doc.postrm debian/rules
+        debian/rules
         examples/guessinggame/GuessingGame.hs
         examples/guessinggame/sounds/guessing-game-correct.gsm
         examples/guessinggame/sounds/guessing-game-intro.gsm
@@ -24,7 +24,7 @@ Extra-Source-Files:
         examples/guessinggame/sounds/guessing-game-lower.gsm
         tests/Main.hs
 build-type:     Simple
-cabal-version:       >= 1.2
+cabal-version:       >= 1.6
 
 flag small_base
   description: Choose the new smaller, split-up base package.
@@ -33,7 +33,7 @@ library
     build-depends:  parsec, mtl, syb
 
     if flag(small_base)
-        build-depends:  base >= 3, random, unix, network
+        build-depends:  base >= 3 && <5, random, unix, network
     else
         build-depends:  base <  3, network
 
