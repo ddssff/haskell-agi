@@ -7,7 +7,7 @@ Description:
      can be used to write external programs that interact with
      Asterisk. It is typically used for creating Interactive Voice
      Response (IVR) systems. 
-Version:        1.2.2
+Version:        1.3
 License:        BSD3
 License-File:   LICENSE
 Author:         Jeremy Shaw
@@ -30,7 +30,7 @@ flag small_base
   description: Choose the new smaller, split-up base package.
 
 library
-    build-depends:  parsec, mtl
+    build-depends:  parsec, mtl, syb
 
     if flag(small_base)
         build-depends:  base >= 3, random, unix, network

@@ -1,69 +1,73 @@
 Source: haskell-agi
 Priority: optional
 Section: misc
-Maintainer: Jeremy Shaw <jeremy@n-heptane.com>
-Build-Depends: debhelper (>= 5.0),
-               haskell-devscripts-cdbs,
-               cabal-debian,
+Maintainer: Jeremy Shaw <jeremy@seereason.com>
+Build-Depends: debhelper (>= 7.0),
+               haskell-devscripts (>= 0.6.15+nmu7),
+               hscolour,
+               cdbs,
                ghc6 (>= 6.8),
-               ghc6-doc,
-               haddock (>= 2.1.0),
                ghc6-prof,
-               libghc6-parsec-prof,
-               libghc6-parsec-doc,
                libghc6-mtl-prof,
-               libghc6-mtl-doc,
-	       libghc6-network-prof,
- 	       libghc6-network-doc
-Standards-Version: 3.7.2.2
+               libghc6-network-prof,
+               libghc6-parsec2-prof
+Build-Depends-Indep: ghc6-doc,
+                     haddock,
+                     libghc6-mtl-doc,
+                     libghc6-network-doc,
+                     libghc6-parsec2-doc
+Standards-Version: 3.8.1
 Homepage: http://www.n-heptane.com/nhlab/repos/haskell-agi
 
 Package: libghc6-agi-dev
 Architecture: any
-Section: libdevel
-Depends: ${haskell:Depends}
+Section: haskell
+Depends: ${haskell:Depends},
+         ${misc:Depends}
 Description: A library for writing AGI scripts for Asterisk
-  Asterisk is an open-source Voice over IP server (VoIP).
-  Asterisk provides an Asterisk Gateway Interface (AGI), which
-  can be used to write external programs that interact with
-  Asterisk. It is typically used for creating Interactive Voice
-  Response (IVR) systems.
-  .
+ Asterisk is an open-source Voice over IP server (VoIP).
+ Asterisk provides an Asterisk Gateway Interface (AGI), which
+ can be used to write external programs that interact with
+ Asterisk. It is typically used for creating Interactive Voice
+ Response (IVR) systems.
+ .
   Author: Jeremy Shaw
   Upstream-Maintainer: Jeremy Shaw <jeremy@n-heptane.com>
-  .
-  This package contains the normal library files.
+ .
+ This package contains the normal library files.
 
 Package: libghc6-agi-prof
 Architecture: any
-Section: libdevel
-Depends: ${haskell:Depends}
+Section: haskell
+Depends: ${haskell:Depends},
+         ${misc:Depends},
+         libghc6-agi-dev
 Description: A library for writing AGI scripts for Asterisk
-  Asterisk is an open-source Voice over IP server (VoIP).
-  Asterisk provides an Asterisk Gateway Interface (AGI), which
-  can be used to write external programs that interact with
-  Asterisk. It is typically used for creating Interactive Voice
-  Response (IVR) systems.
-  .
+ Asterisk is an open-source Voice over IP server (VoIP).
+ Asterisk provides an Asterisk Gateway Interface (AGI), which
+ can be used to write external programs that interact with
+ Asterisk. It is typically used for creating Interactive Voice
+ Response (IVR) systems.
+ .
   Author: Jeremy Shaw
   Upstream-Maintainer: Jeremy Shaw <jeremy@n-heptane.com>
-  .
-  This package contains the libraries compiled with profiling enabled.
+ .
+ This package contains the libraries compiled with profiling enabled.
 
-Package: libghc6-agi-doc
-Architecture: any
-Section: libdevel
-Conflicts: haskell-agi-doc
-Replaces: haskell-agi-doc
-Depends: ${haskell:Depends}
+Package: haskell-agi-doc
+Architecture: all
+Section: doc
+Depends: ${haskell:Depends},
+         ${misc:Depends},
+         ghc6-doc
 Description: A library for writing AGI scripts for Asterisk
-  Asterisk is an open-source Voice over IP server (VoIP).
-  Asterisk provides an Asterisk Gateway Interface (AGI), which
-  can be used to write external programs that interact with
-  Asterisk. It is typically used for creating Interactive Voice
-  Response (IVR) systems.
-  .
+ Asterisk is an open-source Voice over IP server (VoIP).
+ Asterisk provides an Asterisk Gateway Interface (AGI), which
+ can be used to write external programs that interact with
+ Asterisk. It is typically used for creating Interactive Voice
+ Response (IVR) systems.
+ .
   Author: Jeremy Shaw
   Upstream-Maintainer: Jeremy Shaw <jeremy@n-heptane.com>
-  .
-  This package contains the documentation files.
+ .
+ This package contains the documentation files.

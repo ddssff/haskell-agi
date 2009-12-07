@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
-module Network.AGI 
+module Network.AGI
     ( Digit(..)
     , ppDigit
     , ppEscapeDigits
@@ -42,8 +42,10 @@ data AGIEnv = AGIEnv { agiVars :: [(String, String)]
                      , agiOutH :: Handle
                      }
 
-newtype AGI a = AGI { runAGI :: ReaderT AGIEnv IO a }
-    deriving (Monad, MonadIO, Functor, MonadError IOError, MonadReader AGIEnv)
+newtype AGIT m a = AGI { runAGIT :: ReaderT AGIEnv m a }
+    deriving (Monad, MonadIO, Functor, {- MonadError IOError, -} MonadReader AGIEnv)
+
+type AGI = AGIT IO
 
 -- |DTMF digits
 data Digit
@@ -105,9 +107,9 @@ instance Show SoundType where
 -- Example:
 --
 -- @ main = run yourAGI Ignore @
-run :: AGI a -> Handler -> IO a
+run :: (MonadIO m) => AGIT m a -> Handler -> m a
 run agi hupHandler =
-    do installHandler sigHUP hupHandler Nothing
+    do liftIO $ installHandler sigHUP hupHandler Nothing
        runInternal agi stdin stdout
 
 -- |Top-level for long running AGI scripts.
@@ -121,6 +123,7 @@ run agi hupHandler =
 -- some concurrency control for shared data.
 --
 -- TODO: support a hang-up handler
+-- TODO: ability to listen on a specific IP address
 fastAGI :: Maybe PortID -> (HostName -> PortNumber -> AGI a) -> IO ()
 fastAGI portId agi =
     do installHandler sigPIPE Ignore Nothing 
@@ -137,12 +140,12 @@ fastAGI portId agi =
 -- FastAGI support.
 --
 -- TODO: support general method of handling extra arguments (query_string vs command-line arguments)
-runInternal :: AGI a -> Handle -> Handle -> IO a
+runInternal :: (MonadIO m) => AGIT m a -> Handle -> Handle -> m a
 runInternal agi inh outh =
-    do vars <- readAgiVars inh
-       hSetBuffering inh  LineBuffering
-       hSetBuffering outh LineBuffering
-       runReaderT (runAGI agi) (AGIEnv vars inh outh)
+    do vars <- liftIO $ readAgiVars inh
+       liftIO $ hSetBuffering inh  LineBuffering
+       liftIO $ hSetBuffering outh LineBuffering
+       runReaderT (runAGIT agi) (AGIEnv vars inh outh)
 
 readAgiVars :: Handle -> IO [(String, String)]
 readAgiVars inh = 
@@ -164,7 +167,7 @@ readAgiVars inh =
 -- |send an AGI Command, and return the Response
 --
 -- this function provides the low-level send/receive functionality.
-sendRecv :: Command -> AGI String
+sendRecv :: (MonadIO m) => Command -> AGIT m String
 sendRecv cmd =
     do inh  <- liftM agiInH  $ ask
        outh <- liftM agiOutH $ ask
@@ -181,11 +184,10 @@ failure: 200 result=-1
 success: 200 result=0 
 -}
 -- |'answer' channel if not already in answer state
-answer :: AGI Bool -- ^ True on success, False on failure
+answer :: (MonadIO m) => AGIT m Bool -- ^ True on success, False on failure
 answer =
     do res <- sendRecv "ANSWER"
-       parseResult (pResult >> pSuccessFailure) res
-
+       return $ parseResult (pResult >> pSuccessFailure) res
 {-
  Usage: HANGUP [<channelname>] 
 
@@ -198,11 +200,12 @@ failure: 200 result=-1
 success: 200 result=1 
 -}
 -- |hangUp the specified channel
-hangUp :: Maybe String -- ^ channel to hangup, or current channel if not specified
-       -> AGI Bool
+hangUp :: (MonadIO m) 
+       => Maybe String -- ^ channel to hangup, or current channel if not specified
+       -> AGIT m Bool
 hangUp mChannel =
     do res <- sendRecv ("HANGUP" ++ (maybe "" (' ' :) mChannel))
-       parseResult (pResult >> ((char '1' >> return True) <|> (string "-1" >> return False))) res
+       return $ parseResult (pResult >> ((char '1' >> return True) <|> (string "-1" >> return False))) res
 
 {-
 Usage: GET DATA <file to be streamed> [timeout] [max digits]
@@ -220,10 +223,11 @@ success: 200 result=<digits>
 -- |play a file and return and digits pressed
 --
 -- See also: 'streamFile'
-getData :: FilePath -- ^ file to stream
+getData :: (MonadIO m)
+        => FilePath -- ^ file to stream
         -> Maybe Integer -- ^ timout in ms after keypress (default: 2000 ms)
         -> Maybe Integer -- ^ max
-        -> AGI (Maybe ([Digit], Bool)) -- ^ Nothing on failure, Just (digits, timeout) on success
+        -> AGIT m (Maybe ([Digit], Bool)) -- ^ Nothing on failure, Just (digits, timeout) on success
 getData fp mTimeout mMaxDigits =
     let cmd =
 	    "GET DATA " ++ fp ++
@@ -235,7 +239,7 @@ getData fp mTimeout mMaxDigits =
 
     in
       do res <- sendRecv cmd
-         parseResult p res
+         return $ parseResult p res
              where 
                p = do pResult
                       (try pFail >> return Nothing) <|> (pDigitsWithTimeout >>= return . Just)
@@ -266,21 +270,22 @@ data RecordResult
       deriving (Eq, Show, Data, Typeable)
 
 -- |record channel to a file
-record :: FilePath -- ^ record to this file
+record :: (MonadIO m)
+       => FilePath -- ^ record to this file
        -> SoundType -- ^ |GSM \| WAV|
        -> [Digit] -- ^ stop recording if one of these digits is entered
        -> Maybe Integer -- ^ maximum record time in milliseconds, -1 for no timeout
        -> Maybe Integer -- ^ offset samples
        -> Bool -- ^ beep to indicate recording has begun
        -> Maybe Integer -- ^ stop recording if this many seconds of silence passes
-       -> AGI (RecordResult, Integer) -- ^ exit condition, endpos=offset
+       -> AGIT m (RecordResult, Integer) -- ^ exit condition, endpos=offset
 record fp soundType escapeDigits length offset beep silence =
     do res <- sendRecv $ ("RECORD FILE " ++ fp ++ " " ++ show soundType ++ " " ++ 
                           ppEscapeDigits escapeDigits ++ " " ++  (maybe "-1" show length) ++  
                           (maybe "" (\o -> ' ': show o) offset) ++ 
                           (if beep then " beep" else "") ++
                           (maybe "" (\s -> " s=" ++ show s) silence))
-       parseResult p res
+       return $ parseResult p res
 
 p = pResult >> (pFailureToWrite <|> pFailureOnWaitFor <|> pHangUp <|> pInterrupted <|> pTimeout <|> pRandomError)
     where
@@ -292,7 +297,7 @@ p = pResult >> (pFailureToWrite <|> pFailureOnWaitFor <|> pHangUp <|> pInterrupt
              ep <- pEndPos
              return (FailureOnWaitFor, ep)
       pHangUp =
-          do try (string "0 (hangup)")
+          do try (string "0 (hangup)" <|> string "-1 (hangup)")
              pSpace
              ep <- pEndPos
              return (HangUp, ep)
@@ -335,12 +340,13 @@ digit pressed: 200 result=<digit>
 -}
 
 -- |say the given digit string
-sayDigits :: [Digit] -- ^ digits to say
+sayDigits :: (MonadIO m)
+          => [Digit] -- ^ digits to say
           -> [Digit] -- ^ digits which can stop playback
-          -> AGI (Maybe (Maybe Digit)) -- ^ Nothing on error, Just Nothing on success. Just (Just <digit>) if interrupted.
+          -> AGIT m (Maybe (Maybe Digit)) -- ^ Nothing on error, Just Nothing on success. Just (Just <digit>) if interrupted.
 sayDigits digits escapeDigits =
     do res <- sendRecv $ "SAY DIGITS " ++ map ppDigit digits ++ " " ++ ppEscapeDigits escapeDigits
-       parseResult p res
+       return $ parseResult p res
     where
       p = do pResult
              (string "-1" >> return Nothing) <|> (string "0" >> return (Just Nothing)) <|> (pAsciiDigit >>= return . Just . Just)
@@ -364,12 +370,13 @@ digit pressed: 200 result=<digit>
 <digit> is the ascii code for the digit pressed. 
 -}
 -- | 'sayNumber' says the specified number
-sayNumber :: Integer -- ^ number to say
+sayNumber :: (MonadIO m)
+          => Integer -- ^ number to say
           -> [Digit] -- ^ return early if any of these digits are received
-          -> AGI (Maybe (Maybe Digit)) -- ^ Nothing on failure, Just Nothing on success, Just (Just <digit>) if key is pressed
+          -> AGIT m (Maybe (Maybe Digit)) -- ^ Nothing on failure, Just Nothing on success, Just (Just <digit>) if key is pressed
 sayNumber number escapeDigits =
     do res <- sendRecv ("SAY NUMBER " ++ show number ++ " " ++ ppEscapeDigits escapeDigits)
-       parseResult p res
+       return $ parseResult p res
     where
       p = do pResult
              (string "-1" >> return Nothing) <|> (string "0" >> return (Just Nothing)) <|> (pAsciiDigit >>= return . Just . Just)
@@ -402,13 +409,14 @@ Workaround: Use EXEC PLAYBACK instead.
 -- |playback the specified file, can be interupted by the given digits.
 --
 -- See also: 'getData'
-streamFile :: FilePath -- ^ file to stream
+streamFile :: (MonadIO m)
+           => FilePath -- ^ file to stream
            -> [Digit] -- ^ escape digits
            -> Maybe Integer -- ^ sample offset
-           -> AGI (Either Integer (Maybe Digit, Integer)) -- ^ On failure: Left <endpos>. On success: Right (Maybe Digit, <endpos>)
+           -> AGIT m (Either Integer (Maybe Digit, Integer)) -- ^ On failure: Left <endpos>. On success: Right (Maybe Digit, <endpos>)
 streamFile filePath escapeDigits mSampleOffset =
     do res <- sendRecv $ "STREAM FILE " ++ filePath ++ " " ++ ppEscapeDigits escapeDigits ++ (maybe "" (\so -> ' ' :  show so) mSampleOffset)
-       parseResult p res
+       return $ parseResult p res
     where
       p = 
           do pResult
@@ -450,11 +458,12 @@ success: 200 result=<digit>
 -- |wait for channel to receive a DTMF digit. 
 --
 -- See also: 'getData' for multiple digits
-waitForDigit :: Integer -- ^ timeout in milliseconds, -1 to block indefinitely
-             -> AGI (Maybe (Maybe Digit)) -- ^ |Nothing| on error, |Just Nothing| on timeout, |Just (Just <digit>)| on success
+waitForDigit :: (MonadIO m)
+             => Integer -- ^ timeout in milliseconds, -1 to block indefinitely
+             -> AGIT m (Maybe (Maybe Digit)) -- ^ |Nothing| on error, |Just Nothing| on timeout, |Just (Just <digit>)| on success
 waitForDigit timeout =
     do res <- sendRecv $ "WAIT FOR DIGIT " ++ show timeout
-       parseResult p res
+       return $ parseResult p res
     where
       p = do pResult
              (string "-1" >> return Nothing) <|> (string "0" >> return (Just Nothing)) <|> (pAsciiDigit >>= return . Just . Just)
@@ -463,8 +472,8 @@ waitForDigit timeout =
 -- * Result Parsers
 parseResult p res = 
     case parse p res res of
-      (Left e) -> throwError (userError (show e))
-      (Right r) -> return $ r
+      (Left e) -> error (show e) -- throwError (userError (show e))
+      (Right r) -> r
 
 -- |parse 0 as True, -1 as failure
 pSuccessFailure :: CharParser () Bool
