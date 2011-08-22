@@ -1,3 +1,10 @@
+haskell-agi (1.3) unstable; urgency=low
+
+  * Bump version to match cabal file.
+  * GHC 7.2 compatibility.
+
+ -- David Fox <dsf@seereason.com>  Mon, 22 Aug 2011 06:33:29 -0700
+
 haskell-agi (1.2.4) unstable; urgency=low
 
   * Make AGI a monad transformer
