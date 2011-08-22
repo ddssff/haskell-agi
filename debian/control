@@ -11,12 +11,14 @@ Build-Depends: debhelper (>= 7.0),
                libghc-mtl-prof,
                libghc-network-prof,
                libghc-parsec2-prof,
+               libghc-random-prof,
                libghc-syb-prof
 Build-Depends-Indep: ghc-doc,
                      haddock,
                      libghc-mtl-doc,
                      libghc-network-doc,
                      libghc-parsec2-doc,
+                     libghc-random-doc,
                      libghc-syb-doc
 Standards-Version: 3.8.1
 Homepage: http://www.n-heptane.com/nhlab/repos/haskell-agi
